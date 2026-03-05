@@ -827,6 +827,11 @@ export default function App() {
   const [isDownloading, setIsDownloading] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
+  const getInitials = (name: string) => {
+    if (!name) return 'NA';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   const handleDownloadReport = async () => {
     if (!reportRef.current) return;
     
@@ -861,9 +866,22 @@ export default function App() {
           }
           
           // We must traverse the cloned document and replace any unsupported colors with safe fallbacks.
+          // ALSO: html2canvas has severe bugs with letter-spacing (tracking). We must normalize it.
           const elements = clonedDoc.getElementsByTagName('*');
           for (let i = 0; i < elements.length; i++) {
             const el = elements[i] as HTMLElement;
+            
+            // Normalize letter-spacing and word-spacing to prevent text bunching/overlapping in PDF
+            el.style.letterSpacing = 'normal';
+            el.style.wordSpacing = 'normal';
+            
+            // html2canvas often miscalculates widths for extremely heavy fonts (900+)
+            // We cap it at 700 for the PDF generation to ensure better spacing
+            const fontWeight = clonedDoc.defaultView?.getComputedStyle(el).fontWeight;
+            if (fontWeight && (parseInt(fontWeight) > 700 || fontWeight === 'black')) {
+              el.style.fontWeight = '700';
+            }
+            
             const style = clonedDoc.defaultView?.getComputedStyle(el);
             if (style) {
               // Check common color properties including box-shadow
@@ -1562,6 +1580,13 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+                
+                <div className="mt-6 pt-4 border-t border-slate-800/50 text-center">
+                  <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] mb-1">Developed By</p>
+                  <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/50 border border-slate-700/50 text-blue-400 font-black text-xs">
+                    NK
+                  </div>
+                </div>
               </div>
             </aside>
 
@@ -1597,8 +1622,8 @@ export default function App() {
                   <div className="h-8 w-px bg-slate-200" />
 
                   <div className="flex items-center gap-3 cursor-pointer group relative">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border-2 border-transparent group-hover:border-blue-500 transition-all">
-                      <img src="https://picsum.photos/seed/admin/100/100" alt="Admin" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm border-2 border-transparent group-hover:border-blue-400 transition-all shadow-lg shadow-blue-900/20">
+                      {user?.fullName ? getInitials(user.fullName) : 'NA'}
                     </div>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1">
